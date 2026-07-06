@@ -1,0 +1,15 @@
+project Ufo_System is
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+
+   package Compiler is
+      -- -gnatwa: alle Warnungen aktivieren
+      -- -gnata: Assertions (Pre/Post Contracts) zur Laufzeit aktivieren
+      for Default_Switches ("Ada") use ("-gnatwa", "-gnata", "-O2");
+   end Compiler;
+
+   package Prove is
+      -- Konfiguration für den formalen Beweis
+      for Proof_Switches ("Ada") use ("--level=1", "--mode=all", "--report=all");
+   end Prove;
+end Ufo_System;
