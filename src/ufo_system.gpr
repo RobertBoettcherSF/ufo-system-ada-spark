@@ -1,0 +1,17 @@
+-- Project file for UFO System SPARK library
+-- This is the core SPARK-verified library
+
+library project Ufo_System_Lib is
+   for Source_Dirs use (".");
+   for Object_Dir use "../obj/lib";
+   
+   package Compiler is
+      -- SPARK mode with all warnings and assertions enabled
+      for Default_Switches ("Ada") use ("-gnatwa", "-gnata", "-O2");
+   end Compiler;
+   
+   package Prove is
+      -- Formal verification configuration
+      for Proof_Switches ("Ada") use ("--level=1", "--mode=all", "--report=all");
+   end Prove;
+end Ufo_System_Lib;

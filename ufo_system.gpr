@@ -1,15 +1,30 @@
-project Ufo_System is
-   for Source_Dirs use (".");
-   for Object_Dir use "obj";
+-- Main project file for UFO System
+-- This file includes the SPARK library, terminal application, and test suite
 
+project Ufo_System is
+   
+   -- Source directories
+   for Source_Dirs use ("src", "app", "tests");
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+   
+   -- Main executable (terminal application)
+   for Main use ("app/main.adb");
+   
+   -- Compiler options
    package Compiler is
-      -- -gnatwa: alle Warnungen aktivieren
-      -- -gnata: Assertions (Pre/Post Contracts) zur Laufzeit aktivieren
+      -- Enable all warnings
       for Default_Switches ("Ada") use ("-gnatwa", "-gnata", "-O2");
    end Compiler;
-
+   
+   -- SPARK proof configuration
    package Prove is
-      -- Konfiguration für den formalen Beweis
       for Proof_Switches ("Ada") use ("--level=1", "--mode=all", "--report=all");
    end Prove;
+   
+   -- Test executable
+   package Test is
+      for Default_Switches ("Ada") use ("-gnatwa", "-gnata");
+   end Test;
+
 end Ufo_System;
