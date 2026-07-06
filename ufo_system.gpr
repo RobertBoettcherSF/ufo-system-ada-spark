@@ -1,15 +1,23 @@
+--  UAP Control System Project File
+--  Configuration for Ada and SPARK compilation and formal verification
+
 project Ufo_System is
    for Source_Dirs use (".");
    for Object_Dir use "obj";
 
    package Compiler is
-      -- -gnatwa: alle Warnungen aktivieren
-      -- -gnata: Assertions (Pre/Post Contracts) zur Laufzeit aktivieren
+      --  Enable all warnings for code quality
+      --  Enable assertions (Pre/Post contracts) at runtime
+      --  Optimize for performance
       for Default_Switches ("Ada") use ("-gnatwa", "-gnata", "-O2");
    end Compiler;
 
    package Prove is
-      -- Konfiguration für den formalen Beweis
+      --  Configuration for formal verification with GNATprove
+      --  Level 1: Check all assertions and pre/post conditions
+      --  Mode all: Verify all subprograms
+      --  Report all: Generate detailed verification reports
       for Proof_Switches ("Ada") use ("--level=1", "--mode=all", "--report=all");
    end Prove;
+
 end Ufo_System;
