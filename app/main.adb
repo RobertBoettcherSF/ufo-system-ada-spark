@@ -135,12 +135,12 @@ procedure Main is
       );
       Print_State(State);
       
-      -- Calculate target speed (should be light speed)
+      -- Calculate target speed (should be near light speed (99.9% of c))
       IO.Put_Line("Calculating target speed for Interstellar in deep space...");
       Ufo_System.Calculate_Target_Speed(State);
       Print_State(State);
       
-      -- Adjust to environment (should work toward light speed and 16,000+ km altitude)
+      -- Adjust to environment (should work toward near light speed (99.9% of c) and 16,000+ km altitude)
       IO.Put_Line("Adjusting to environment for Interstellar mode in deep space...");
       Ufo_System.Adjust_To_Environment(State);
       Print_State(State);
@@ -334,11 +334,11 @@ procedure Main is
                   Speed : Integer;
                begin
                   Speed := Integer'Value(Token(Cmd, 2));
-                  if Speed >= 0 and Speed <= 300_000_000 then
+                  if Speed >= 0 and Speed <= 299_493_155 then
                      Ufo_System.Set_Speed(State, Ufo_System.Meters_Per_Second(Speed));
                      IO.Put_Line("Speed set to " & Ufo_System.Meters_Per_Second'Image(Ufo_System.Meters_Per_Second(Speed)) & " m/s");
                   else
-                     IO.Put_Line("ERROR: Speed must be 0-300000000 m/s (light speed)");
+                     IO.Put_Line("ERROR: Speed must be 0-299493155 m/s (near light speed (99.9% of c)))");
                   end if;
                exception
                   when others =>

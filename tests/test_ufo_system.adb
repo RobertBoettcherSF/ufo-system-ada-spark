@@ -316,7 +316,7 @@ procedure Test_Ufo_System is
       State := (False, 0, Ufo.Interstellar, 100, 0, 0, 0, 22, Space_Env, 0);
       
       Ufo.Calculate_Target_Speed(State);
-      Tests.Assert_Equal(State.Target_Speed, Ufo.Speed_Of_Light, 
+      Tests.Assert_Equal(State.Target_Speed, Ufo.Max_Achievable_Speed, 
                         "Target speed should be light speed in deep space");
    end Test_Calculate_Target_Speed_Interstellar;
    
@@ -334,7 +334,7 @@ procedure Test_Ufo_System is
       State := (False, 0, Ufo.Interstellar, 100, 0, 0, 0, 22, Space_Env, 0);
       
       Ufo.Calculate_Target_Speed(State);
-      Tests.Assert(State.Target_Speed < Ufo.Speed_Of_Light, 
+      Tests.Assert(State.Target_Speed <= Ufo.Max_Achievable_Speed, 
                    "Target speed should be less than light speed with obstacle");
       Tests.Assert_Equal(State.Target_Speed, 1_000, 
                         "Target speed should be 1000 m/s for 500 km obstacle");

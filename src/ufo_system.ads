@@ -5,12 +5,14 @@ package Ufo_System with SPARK_Mode is
    
    -- Speed types
    type Knots is range 0 .. 5000;  -- Nautical speed (for compatibility)
-   type Meters_Per_Second is range 0 .. 300_000_000;  -- SI unit for velocity (up to light speed)
+   
+   -- Maximum speed: 99.9% of light speed (299,493,155 m/s)
+   -- Nothing with mass can reach or exceed light speed (299,792,458 m/s)
+   type Meters_Per_Second is range 0 .. 299_493_155;
    
    -- Distance/altitude types (using metric)
    type Degrees is range 0 .. 359;
    type Kilometers is range 0 .. 1_000_000_000;  -- Distance in kilometers
-   type Meters is range 0 .. 1_000_000_000;  -- Altitude in meters (SI unit)
    
    -- Temperature with human-safe range
    type Temperature_Celsius is range -100 .. 2000;  -- Temperature range
@@ -20,8 +22,12 @@ package Ufo_System with SPARK_Mode is
    Human_Max_Temp : constant Temperature_Celsius := 25;
    Human_Critical_Temp : constant Temperature_Celsius := 30;  -- Above this, immediate action needed
    
-   -- Speed of light in m/s (299,792,458 m/s)
+   -- Speed of light in m/s (299,792,458 m/s) - theoretical limit
    Speed_Of_Light : constant Meters_Per_Second := 299_792_458;
+   
+   -- Maximum achievable speed: 99.9% of light speed
+   -- This is the practical limit for any craft with mass
+   Max_Achievable_Speed : constant Meters_Per_Second := 299_493_155;
    
    -- Escape velocities in m/s for different celestial bodies
    Earth_Escape_Velocity : constant Meters_Per_Second := 11_186;  -- 11.2 km/s
@@ -82,6 +88,7 @@ package Ufo_System with SPARK_Mode is
           Post    => State.Current_Wind = Wind_Speed;
 
    -- Set the speed of the craft manually or via board computer (in m/s)
+   -- Speed is limited to Max_Achievable_Speed (99.9% of light speed)
    procedure Set_Speed (State : in out UAP_State; Speed : Meters_Per_Second)
      with Depends => (State => (State, Speed)),
           Post    => State.Current_Speed = Speed;
@@ -127,14 +134,14 @@ package Ufo_System with SPARK_Mode is
    -- Calculate target speed based on current mode and environment
    -- In atmosphere: target is escape velocity (can go lower but this is the goal)
    -- In LEO: maintain orbital velocity
-   -- In deep space with no obstacles: target is light speed
+   -- In deep space with no obstacles: target is near light speed (Max_Achievable_Speed)
    -- In deep space with obstacles: target is safe evasion speed
    procedure Calculate_Target_Speed (State : in out UAP_State)
      with Depends => (State => State);
 
    -- Emergency routine: Adjust speed and altitude for current propulsion mode
    -- This ensures the craft operates within safe parameters for its mode
-   -- In deep space: maintains speed toward light speed, maintains safe altitude
+   -- In deep space: maintains speed toward Max_Achievable_Speed, maintains safe altitude
    -- With obstacles: reduces speed for evasion
    -- Pre: Environment must be valid (distance >= 0)
    procedure Adjust_To_Environment (State : in out UAP_State)

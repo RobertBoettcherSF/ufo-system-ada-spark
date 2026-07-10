@@ -85,6 +85,8 @@ package body Ufo_System with SPARK_Mode is
 
    -- Calculate target speed based on current mode and environment
    -- This sets the Target_Speed field which the board computer will work toward
+   -- IMPORTANT: Target speed NEVER exceeds Max_Achievable_Speed (99.9% of light speed)
+   -- as nothing with mass can reach or exceed light speed
    procedure Calculate_Target_Speed (State : in out UAP_State) is
       Target : Meters_Per_Second;
    begin
@@ -121,8 +123,10 @@ package body Ufo_System with SPARK_Mode is
                      Target := 100;     -- 100 m/s for close evasion
                   end if;
                else
-                  -- No obstacles: accelerate toward light speed
-                  Target := Speed_Of_Light;
+                  -- No obstacles: accelerate toward maximum achievable speed
+                  -- This is 99.9% of light speed, NOT light speed itself
+                  -- Nothing with mass can reach light speed
+                  Target := Max_Achievable_Speed;
                end if;
             elsif State.Environment.Relative_Distance > Atmosphere_Boundary then
                -- Above atmosphere: target is escape velocity or higher
@@ -151,6 +155,11 @@ package body Ufo_System with SPARK_Mode is
             end if;
       end case;
       
+      -- Ensure target never exceeds maximum achievable speed (99.9% of light speed)
+      if Target > Max_Achievable_Speed then
+         Target := Max_Achievable_Speed;
+      end if;
+      
       State.Target_Speed := Target;
    end Calculate_Target_Speed;
 
@@ -158,8 +167,9 @@ package body Ufo_System with SPARK_Mode is
    -- Different propulsion modes have different optimal speed/altitude ranges:
    -- - Hover: Low speed (0-50 m/s), low altitude (0-1 km)
    -- - Atmospheric_Cruise: Speed toward escape velocity, altitude flexible (0-15 km)
-   -- - Interstellar: High speed (toward light speed), high altitude (16,000+ km in deep space)
+   -- - Interstellar: High speed (toward Max_Achievable_Speed), high altitude (16,000+ km in deep space)
    -- This procedure automatically adjusts to safe parameters based on environment
+   -- IMPORTANT: Speed NEVER exceeds Max_Achievable_Speed (99.9% of light speed)
    procedure Adjust_To_Environment (State : in out UAP_State) is
       Safe_Speed : Meters_Per_Second;
       Safe_Altitude : Kilometers;
@@ -215,7 +225,7 @@ package body Ufo_System with SPARK_Mode is
             
          when Interstellar =>
             -- Interstellar mode: high speed, high altitude or deep space
-            -- Must maintain speed toward target (light speed or escape velocity)
+            -- Must maintain speed toward target (Max_Achievable_Speed or escape velocity)
             -- Must maintain altitude above 16,000 km in deep space
             
             if State.Environment.Body_Type = Deep_Space then
@@ -232,7 +242,7 @@ package body Ufo_System with SPARK_Mode is
                      Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, 100);
                   end if;
                else
-                  -- No obstacles: work toward light speed
+                  -- No obstacles: work toward Max_Achievable_Speed (99.9% of light speed)
                   Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, State.Target_Speed);
                end if;
                
