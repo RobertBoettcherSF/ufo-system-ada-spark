@@ -22,6 +22,7 @@ procedure Main is
       IO.Put_Line("Propulsion Mode:  " & Ufo_System.Propulsion_Mode'Image(S.Mode));
       IO.Put_Line("Hull Integrity:   " & Integer'Image(S.Hull_Integrity) & "%");
       IO.Put_Line("Current Speed:    " & Ufo_System.Meters_Per_Second'Image(S.Current_Speed) & " m/s");
+      IO.Put_Line("Target Speed:     " & Ufo_System.Meters_Per_Second'Image(S.Target_Speed) & " m/s");
       IO.Put_Line("Current Altitude: " & Ufo_System.Kilometers'Image(S.Current_Altitude) & " km");
       IO.Put_Line("Current Heading:  " & Ufo_System.Degrees'Image(S.Current_Heading) & " degrees");
       IO.Put_Line("Core Temperature: " & Ufo_System.Temperature_Celsius'Image(S.Core_Temperature) & " C");
@@ -31,6 +32,10 @@ procedure Main is
       IO.Put_Line("  Body Type: " & Ufo_System.Celestial_Body_Type'Image(S.Environment.Body_Type));
       IO.Put_Line("  Distance:  " & Ufo_System.Kilometers'Image(S.Environment.Relative_Distance) & " km");
       IO.Put_Line("  Pressure:  " & Float'Image(S.Environment.Atmospheric_Pressure) & " hPa");
+      IO.Put_Line("  Obstacle:  " & Ufo_System.Obstacle_State'Image(S.Environment.Has_Obstacle));
+      if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then
+         IO.Put_Line("  Obstacle Distance: " & Ufo_System.Kilometers'Image(S.Environment.Obstacle_Distance) & " km");
+      end if;
       IO.New_Line;
    end Print_State;
    
@@ -54,7 +59,9 @@ procedure Main is
       Default_Env := (
          Relative_Distance => 10,  -- 10 km from Earth surface
          Body_Type => Ufo_System.Earth,
-         Atmospheric_Pressure => 1013.25
+         Atmospheric_Pressure => 1013.25,
+         Has_Obstacle => Ufo_System.No_Obstacle,
+         Obstacle_Distance => 0
       );
       
       State := (
@@ -66,7 +73,8 @@ procedure Main is
          Current_Altitude => 0,
          Current_Heading => 0,
          Core_Temperature => 22,  -- Comfortable human temperature
-         Environment     => Default_Env
+         Environment     => Default_Env,
+         Target_Speed    => 0
       );
       
       IO.Put_Line("Initial state:");
@@ -86,12 +94,22 @@ procedure Main is
       Ufo_System.Set_Altitude(State, 5);
       Print_State(State);
       
-      -- Change propulsion mode
+      -- Calculate target speed (should be Earth escape velocity: 11,186 m/s)
+      IO.Put_Line("Calculating target speed for Atmospheric Cruise mode...");
+      Ufo_System.Calculate_Target_Speed(State);
+      Print_State(State);
+      
+      -- Adjust to environment (should work toward escape velocity)
+      IO.Put_Line("Adjusting to environment (will work toward escape velocity)...");
+      Ufo_System.Adjust_To_Environment(State);
+      Print_State(State);
+      
+      -- Switch to Hover mode
       IO.Put_Line("Switching to Hover mode...");
       State.Mode := Ufo_System.Hover;
       Print_State(State);
       
-      -- Adjust to environment (should reduce speed and altitude for hover mode)
+      -- Adjust to environment for hover (should limit to 50 m/s, 1 km)
       IO.Put_Line("Adjusting to environment for Hover mode...");
       Ufo_System.Adjust_To_Environment(State);
       Print_State(State);
@@ -106,18 +124,45 @@ procedure Main is
       State.Mode := Ufo_System.Interstellar;
       Print_State(State);
       
-      -- Update environment for deep space (1,000,000 km from Earth)
-      IO.Put_Line("Entering deep space (1,000,000 km from Earth)...");
+      -- Update environment for deep space (1,000,000 km from Earth, no obstacles)
+      IO.Put_Line("Entering deep space (1,000,000 km from Earth, no obstacles)...");
       State.Environment := (
          Relative_Distance => 1_000_000,
          Body_Type => Ufo_System.Deep_Space,
-         Atmospheric_Pressure => 0.0
+         Atmospheric_Pressure => 0.0,
+         Has_Obstacle => Ufo_System.No_Obstacle,
+         Obstacle_Distance => 0
       );
       Print_State(State);
       
-      -- Adjust to environment (should increase speed above escape velocity and altitude to 16,000+ km)
+      -- Calculate target speed (should be light speed)
+      IO.Put_Line("Calculating target speed for Interstellar in deep space...");
+      Ufo_System.Calculate_Target_Speed(State);
+      Print_State(State);
+      
+      -- Adjust to environment (should work toward light speed and 16,000+ km altitude)
       IO.Put_Line("Adjusting to environment for Interstellar mode in deep space...");
       Ufo_System.Adjust_To_Environment(State);
+      Print_State(State);
+      
+      -- Simulate obstacle detection in deep space
+      IO.Put_Line("OBSTACLE DETECTED! Asteroid at 500 km distance...");
+      Ufo_System.Set_Obstacle(State, Ufo_System.Obstacle_Detected, 500);
+      Print_State(State);
+      
+      -- Calculate new target speed (should reduce for evasion)
+      IO.Put_Line("Calculating new target speed with obstacle...");
+      Ufo_System.Calculate_Target_Speed(State);
+      Print_State(State);
+      
+      -- Adjust to environment (should reduce speed for evasion)
+      IO.Put_Line("Adjusting speed for obstacle evasion...");
+      Ufo_System.Adjust_To_Environment(State);
+      Print_State(State);
+      
+      -- Obstacle cleared
+      IO.Put_Line("Obstacle cleared! Resuming normal operations...");
+      Ufo_System.Set_Obstacle(State, Ufo_System.No_Obstacle, 0);
       Print_State(State);
       
       -- Simulate temperature increase (but still within human comfort)
@@ -182,7 +227,8 @@ procedure Main is
       IO.Put_Line("Commands: state, rotate, wind <knots>, mode <hover|interstellar|cruise>,");
       IO.Put_Line("         speed <m/s>, altitude <km>, heading <degrees>,");
       IO.Put_Line("         temp <celsius>, env <body> <distance_km> <pressure_hPa>,");
-      IO.Put_Line("         adjust, regulate_temp, emergency_cool, damage <percent>, repair <percent>,");
+      IO.Put_Line("         obstacle <on|off> <distance_km>, calculate_target, adjust,");
+      IO.Put_Line("         regulate_temp, emergency_cool, damage <percent>, repair <percent>,");
       IO.Put_Line("         help, quit");
       IO.New_Line;
       
@@ -199,8 +245,11 @@ procedure Main is
          Environment     => (
             Relative_Distance => 10,
             Body_Type => Ufo_System.Earth,
-            Atmospheric_Pressure => 1013.25
-         )
+            Atmospheric_Pressure => 1013.25,
+            Has_Obstacle => Ufo_System.No_Obstacle,
+            Obstacle_Distance => 0
+         ),
+         Target_Speed    => 0
       );
       
       loop
@@ -227,6 +276,8 @@ procedure Main is
                IO.Put_Line("  heading <degrees>  - Set heading/direction");
                IO.Put_Line("  temp <celsius>     - Set core temperature");
                IO.Put_Line("  env <body> <dist> <press> - Set environment (body: earth/moon/mars/space/other)");
+               IO.Put_Line("  obstacle <on|off> <dist> - Set obstacle detection");
+               IO.Put_Line("  calculate_target   - Calculate target speed for current mode");
                IO.Put_Line("  adjust             - Auto-adjust speed/altitude to environment");
                IO.Put_Line("  regulate_temp      - Regulate temperature to human comfort range");
                IO.Put_Line("  emergency_cool     - Emergency cooling (requires temp > 30C)");
@@ -283,11 +334,11 @@ procedure Main is
                   Speed : Integer;
                begin
                   Speed := Integer'Value(Token(Cmd, 2));
-                  if Speed >= 0 and Speed <= 50_000 then
+                  if Speed >= 0 and Speed <= 300_000_000 then
                      Ufo_System.Set_Speed(State, Ufo_System.Meters_Per_Second(Speed));
                      IO.Put_Line("Speed set to " & Ufo_System.Meters_Per_Second'Image(Ufo_System.Meters_Per_Second(Speed)) & " m/s");
                   else
-                     IO.Put_Line("ERROR: Speed must be 0-50000 m/s");
+                     IO.Put_Line("ERROR: Speed must be 0-300000000 m/s (light speed)");
                   end if;
                exception
                   when others =>
@@ -298,11 +349,11 @@ procedure Main is
                   Altitude : Integer;
                begin
                   Altitude := Integer'Value(Token(Cmd, 2));
-                  if Altitude >= 0 and Altitude <= 1_000_000 then
+                  if Altitude >= 0 and Altitude <= 1_000_000_000 then
                      Ufo_System.Set_Altitude(State, Ufo_System.Kilometers(Altitude));
                      IO.Put_Line("Altitude set to " & Ufo_System.Kilometers'Image(Ufo_System.Kilometers(Altitude)) & " km");
                   else
-                     IO.Put_Line("ERROR: Altitude must be 0-1000000 km");
+                     IO.Put_Line("ERROR: Altitude must be 0-1000000000 km");
                   end if;
                exception
                   when others =>
@@ -370,6 +421,36 @@ procedure Main is
                exception
                   when others =>
                      IO.Put_Line("ERROR: Invalid environment parameters");
+               end;
+            elsif Token(Cmd, 1) = "obstacle" and Tokens >= 2 then
+               declare
+                  Obstacle_Status : constant String := To_Lower(Token(Cmd, 2));
+                  Distance : Integer := 0;
+               begin
+                  if Tokens >= 3 then
+                     Distance := Integer'Value(Token(Cmd, 3));
+                  end if;
+                  
+                  if Obstacle_Status = "on" or Obstacle_Status = "yes" or Obstacle_Status = "true" then
+                     Ufo_System.Set_Obstacle(State, Ufo_System.Obstacle_Detected, Ufo_System.Kilometers(Distance));
+                     IO.Put_Line("Obstacle detected at " & Ufo_System.Kilometers'Image(Ufo_System.Kilometers(Distance)) & " km");
+                  elsif Obstacle_Status = "off" or Obstacle_Status = "no" or Obstacle_Status = "false" then
+                     Ufo_System.Set_Obstacle(State, Ufo_System.No_Obstacle, 0);
+                     IO.Put_Line("No obstacle - clear path");
+                  else
+                     IO.Put_Line("ERROR: Use 'on' or 'off' for obstacle status");
+                  end if;
+               exception
+                  when others =>
+                     IO.Put_Line("ERROR: Invalid obstacle parameters");
+               end;
+            elsif Token(Cmd, 1) = "calculate_target" then
+               begin
+                  Ufo_System.Calculate_Target_Speed(State);
+                  IO.Put_Line("Target speed calculated: " & Ufo_System.Meters_Per_Second'Image(State.Target_Speed) & " m/s");
+               exception
+                  when others =>
+                     IO.Put_Line("ERROR: Cannot calculate target speed");
                end;
             elsif Token(Cmd, 1) = "adjust" then
                begin

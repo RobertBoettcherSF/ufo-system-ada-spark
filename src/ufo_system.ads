@@ -5,12 +5,12 @@ package Ufo_System with SPARK_Mode is
    
    -- Speed types
    type Knots is range 0 .. 5000;  -- Nautical speed (for compatibility)
-   type Meters_Per_Second is range 0 .. 50_000;  -- SI unit for velocity
+   type Meters_Per_Second is range 0 .. 300_000_000;  -- SI unit for velocity (up to light speed)
    
    -- Distance/altitude types (using metric)
    type Degrees is range 0 .. 359;
-   type Kilometers is range 0 .. 1_000_000;  -- Distance in kilometers
-   type Meters is range 0 .. 1_000_000;  -- Altitude in meters (SI unit)
+   type Kilometers is range 0 .. 1_000_000_000;  -- Distance in kilometers
+   type Meters is range 0 .. 1_000_000_000;  -- Altitude in meters (SI unit)
    
    -- Temperature with human-safe range
    type Temperature_Celsius is range -100 .. 2000;  -- Temperature range
@@ -20,6 +20,9 @@ package Ufo_System with SPARK_Mode is
    Human_Max_Temp : constant Temperature_Celsius := 25;
    Human_Critical_Temp : constant Temperature_Celsius := 30;  -- Above this, immediate action needed
    
+   -- Speed of light in m/s (299,792,458 m/s)
+   Speed_Of_Light : constant Meters_Per_Second := 299_792_458;
+   
    -- Escape velocities in m/s for different celestial bodies
    Earth_Escape_Velocity : constant Meters_Per_Second := 11_186;  -- 11.2 km/s
    Moon_Escape_Velocity : constant Meters_Per_Second := 2_375;   -- 2.375 km/s
@@ -28,15 +31,27 @@ package Ufo_System with SPARK_Mode is
    -- Minimum safe altitude for deep space operations (16,000 km from Earth)
    Deep_Space_Min_Altitude : constant Kilometers := 16_000;
    
+   -- Low Earth Orbit altitude range (160-2000 km)
+   LEO_Min_Altitude : constant Kilometers := 160;
+   LEO_Max_Altitude : constant Kilometers := 2_000;
+   
+   -- Atmospheric boundary (Karman line: 100 km)
+   Atmosphere_Boundary : constant Kilometers := 100;
+   
    type Propulsion_Mode is (Hover, Interstellar, Atmospheric_Cruise);
 
    -- Environment types for celestial body proximity
    type Celestial_Body_Type is (Earth, Moon, Mars, Deep_Space, Other);
    
+   -- Obstacle detection state
+   type Obstacle_State is (No_Obstacle, Obstacle_Detected);
+   
    type Environment_State is record
       Relative_Distance : Kilometers;  -- Distance to nearest celestial body in km
       Body_Type : Celestial_Body_Type;
       Atmospheric_Pressure : Float;  -- in hPa (hectopascals)
+      Has_Obstacle : Obstacle_State;  -- Whether an obstacle is detected ahead
+      Obstacle_Distance : Kilometers;  -- Distance to obstacle (0 if none)
    end record;
 
    type UAP_State is record
@@ -49,6 +64,7 @@ package Ufo_System with SPARK_Mode is
       Current_Heading : Degrees;  -- Current direction
       Core_Temperature : Temperature_Celsius;  -- Core system temperature
       Environment     : Environment_State;  -- Current environment
+      Target_Speed    : Meters_Per_Second;  -- Target speed for current mode
    end record;
 
    -- Procedure to engage the "Gimbal" rotation observed by pilots.
@@ -90,11 +106,14 @@ package Ufo_System with SPARK_Mode is
      with Depends => (State => (State, Temp)),
           Post    => State.Core_Temperature = Temp;
 
-   -- Emergency routine: Temperature outside human comfort range
+   -- Set obstacle detection state
+   procedure Set_Obstacle (State : in out UAP_State; Has_Obstacle : Obstacle_State; Distance : Kilometers)
+     with Depends => (State => (State, Has_Obstacle, Distance)),
+          Post    => State.Environment.Has_Obstacle = Has_Obstacle and State.Environment.Obstacle_Distance = Distance;
+
+   -- Temperature regulation: maintain human comfort range (18-25C)
    -- If temperature is below 18C or above 25C, activate climate control
    -- If temperature exceeds 30C (critical), initiate emergency cooling
-   -- Pre: Temperature must be outside safe range
-   -- Post: Temperature is adjusted toward safe range, or emergency cooling activated
    procedure Regulate_Temperature (State : in out UAP_State)
      with Depends => (State => State);
 
@@ -105,9 +124,18 @@ package Ufo_System with SPARK_Mode is
      with Depends => (State => State),
           Pre     => State.Core_Temperature > Human_Critical_Temp;
 
+   -- Calculate target speed based on current mode and environment
+   -- In atmosphere: target is escape velocity (can go lower but this is the goal)
+   -- In LEO: maintain orbital velocity
+   -- In deep space with no obstacles: target is light speed
+   -- In deep space with obstacles: target is safe evasion speed
+   procedure Calculate_Target_Speed (State : in out UAP_State)
+     with Depends => (State => State);
+
    -- Emergency routine: Adjust speed and altitude for current propulsion mode
    -- This ensures the craft operates within safe parameters for its mode
-   -- In deep space: maintains speed above escape velocity and appropriate altitude
+   -- In deep space: maintains speed toward light speed, maintains safe altitude
+   -- With obstacles: reduces speed for evasion
    -- Pre: Environment must be valid (distance >= 0)
    procedure Adjust_To_Environment (State : in out UAP_State)
      with Depends => (State => State),

@@ -37,9 +37,16 @@ package body Ufo_System with SPARK_Mode is
       State.Core_Temperature := Temp;
    end Set_Temperature;
 
+   procedure Set_Obstacle (State : in out UAP_State; Has_Obstacle : Obstacle_State; Distance : Kilometers) is
+   begin
+      State.Environment.Has_Obstacle := Has_Obstacle;
+      State.Environment.Obstacle_Distance := Distance;
+   end Set_Obstacle;
+
    -- Temperature regulation: maintain human comfort range (18-25C)
-   -- If temperature is outside this range, activate climate control systems
-   -- If temperature exceeds 30C, trigger emergency cooling
+   -- If temperature is too low, increase it toward minimum
+   -- If temperature is too high but not critical, decrease it toward maximum
+   -- If temperature is critically high, trigger emergency cooling
    procedure Regulate_Temperature (State : in out UAP_State) is
    begin
       -- If temperature is too low, increase it toward minimum
@@ -76,17 +83,91 @@ package body Ufo_System with SPARK_Mode is
       end if;
    end Emergency_Cooling;
 
+   -- Calculate target speed based on current mode and environment
+   -- This sets the Target_Speed field which the board computer will work toward
+   procedure Calculate_Target_Speed (State : in out UAP_State) is
+      Target : Meters_Per_Second;
+   begin
+      case State.Mode is
+         when Hover =>
+            -- Hover mode: low speed, can be 0 but target is minimal for stability
+            Target := 10;  -- 10 m/s for stability
+            
+         when Atmospheric_Cruise =>
+            -- Atmospheric cruise: target is escape velocity of current body
+            -- This allows instant escape if threat detected
+            case State.Environment.Body_Type is
+               when Earth =>
+                  Target := Earth_Escape_Velocity;
+               when Moon =>
+                  Target := Moon_Escape_Velocity;
+               when Mars =>
+                  Target := Mars_Escape_Velocity;
+               when others =>
+                  Target := Earth_Escape_Velocity;
+            end case;
+            
+         when Interstellar =>
+            -- Interstellar mode: depends on environment
+            if State.Environment.Body_Type = Deep_Space then
+               if State.Environment.Has_Obstacle = Obstacle_Detected then
+                  -- Obstacle detected: reduce speed for evasion
+                  -- Target speed based on distance to obstacle
+                  if State.Environment.Obstacle_Distance > 1000 then
+                     Target := 10_000;  -- 10 km/s for long-range evasion
+                  elsif State.Environment.Obstacle_Distance > 100 then
+                     Target := 1_000;   -- 1 km/s for medium-range evasion
+                  else
+                     Target := 100;     -- 100 m/s for close evasion
+                  end if;
+               else
+                  -- No obstacles: accelerate toward light speed
+                  Target := Speed_Of_Light;
+               end if;
+            elsif State.Environment.Relative_Distance > Atmosphere_Boundary then
+               -- Above atmosphere: target is escape velocity or higher
+               case State.Environment.Body_Type is
+                  when Earth =>
+                     Target := Meters_Per_Second'Max(Earth_Escape_Velocity, State.Current_Speed);
+                  when Moon =>
+                     Target := Meters_Per_Second'Max(Moon_Escape_Velocity, State.Current_Speed);
+                  when Mars =>
+                     Target := Meters_Per_Second'Max(Mars_Escape_Velocity, State.Current_Speed);
+                  when others =>
+                     Target := Meters_Per_Second'Max(Earth_Escape_Velocity, State.Current_Speed);
+               end case;
+            else
+               -- In atmosphere: target is escape velocity
+               case State.Environment.Body_Type is
+                  when Earth =>
+                     Target := Earth_Escape_Velocity;
+                  when Moon =>
+                     Target := Moon_Escape_Velocity;
+                  when Mars =>
+                     Target := Mars_Escape_Velocity;
+                  when others =>
+                     Target := Earth_Escape_Velocity;
+               end case;
+            end if;
+      end case;
+      
+      State.Target_Speed := Target;
+   end Calculate_Target_Speed;
+
    -- Emergency routine: Adjust speed and altitude for propulsion mode
    -- Different propulsion modes have different optimal speed/altitude ranges:
    -- - Hover: Low speed (0-50 m/s), low altitude (0-1 km)
-   -- - Atmospheric_Cruise: Medium speed (50-300 m/s), medium altitude (1-15 km)
-   -- - Interstellar: High speed (above escape velocity), high altitude (16,000+ km or deep space)
+   -- - Atmospheric_Cruise: Speed toward escape velocity, altitude flexible (0-15 km)
+   -- - Interstellar: High speed (toward light speed), high altitude (16,000+ km in deep space)
    -- This procedure automatically adjusts to safe parameters based on environment
    procedure Adjust_To_Environment (State : in out UAP_State) is
       Safe_Speed : Meters_Per_Second;
       Safe_Altitude : Kilometers;
       Min_Safe_Speed : Meters_Per_Second;
    begin
+      -- First calculate what the target speed should be
+      Calculate_Target_Speed(State);
+      
       case State.Mode is
          when Hover =>
             -- Hover mode: low and slow
@@ -96,35 +177,69 @@ package body Ufo_System with SPARK_Mode is
             Safe_Altitude := Kilometers'Min(State.Current_Altitude, 1);
             
          when Atmospheric_Cruise =>
-            -- Atmospheric cruise: medium speed and altitude
-            -- Adjust based on atmospheric pressure
+            -- Atmospheric cruise: can go from 0 up to escape velocity
+            -- Altitude: 0 to 15 km based on atmospheric pressure
+            -- Speed: work toward escape velocity (Target_Speed)
+            
+            -- Adjust altitude based on pressure
             if State.Environment.Atmospheric_Pressure > 500.0 then
                -- Dense atmosphere (near sea level)
-               Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, 150);  -- ~300 knots
                Safe_Altitude := Kilometers'Min(State.Current_Altitude, 5);  -- 5 km
             elsif State.Environment.Atmospheric_Pressure > 100.0 then
                -- Medium atmosphere
-               Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, 250);  -- ~500 knots
                Safe_Altitude := Kilometers'Min(State.Current_Altitude, 12);  -- 12 km
             else
                -- Thin atmosphere or near space
-               Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, 300);  -- ~600 knots
                Safe_Altitude := Kilometers'Min(State.Current_Altitude, 15);  -- 15 km
+            end if;
+            
+            -- Speed: work toward target (escape velocity)
+            -- Allow current speed to be lower (pilot can go slower)
+            -- But don't exceed escape velocity in atmosphere
+            if State.Environment.Atmospheric_Pressure > 0.0 then
+               -- In atmosphere: limit to escape velocity
+               case State.Environment.Body_Type is
+                  when Earth =>
+                     Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, Earth_Escape_Velocity);
+                  when Moon =>
+                     Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, Moon_Escape_Velocity);
+                  when Mars =>
+                     Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, Mars_Escape_Velocity);
+                  when others =>
+                     Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, Earth_Escape_Velocity);
+               end case;
+            else
+               -- No atmosphere: can go up to target speed
+               Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, State.Target_Speed);
             end if;
             
          when Interstellar =>
             -- Interstellar mode: high speed, high altitude or deep space
-            -- Must maintain speed above escape velocity for current body
+            -- Must maintain speed toward target (light speed or escape velocity)
             -- Must maintain altitude above 16,000 km in deep space
             
             if State.Environment.Body_Type = Deep_Space then
                -- In deep space: maintain high speed and altitude
-               Min_Safe_Speed := 10_000;  -- 10 km/s (above Earth escape velocity)
-               Safe_Speed := Meters_Per_Second'Max(State.Current_Speed, Min_Safe_Speed);
+               Min_Safe_Speed := 10_000;  -- 10 km/s minimum in deep space
+               
+               if State.Environment.Has_Obstacle = Obstacle_Detected then
+                  -- Obstacle detected: reduce speed based on distance
+                  if State.Environment.Obstacle_Distance > 1000 then
+                     Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, 10_000);
+                  elsif State.Environment.Obstacle_Distance > 100 then
+                     Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, 1_000);
+                  else
+                     Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, 100);
+                  end if;
+               else
+                  -- No obstacles: work toward light speed
+                  Safe_Speed := Meters_Per_Second'Min(State.Current_Speed, State.Target_Speed);
+               end if;
+               
                Safe_Altitude := Kilometers'Max(State.Current_Altitude, Deep_Space_Min_Altitude);
                
-            elsif State.Environment.Relative_Distance > 100_000 then
-               -- Far from celestial body - can go fast
+            elsif State.Environment.Relative_Distance > Atmosphere_Boundary then
+               -- Above atmosphere but near a body
                -- Use escape velocity of the nearest body
                case State.Environment.Body_Type is
                   when Earth =>
@@ -138,11 +253,10 @@ package body Ufo_System with SPARK_Mode is
                end case;
                
                Safe_Speed := Meters_Per_Second'Max(State.Current_Speed, Min_Safe_Speed);
-               Safe_Altitude := Kilometers'Max(State.Current_Altitude, Deep_Space_Min_Altitude);
+               Safe_Altitude := Kilometers'Max(State.Current_Altitude, LEO_Min_Altitude);
                
             else
-               -- Near a celestial body - adjust based on distance
-               -- Maintain speed appropriate for current distance
+               -- In atmosphere: maintain escape velocity
                case State.Environment.Body_Type is
                   when Earth =>
                      Min_Safe_Speed := Earth_Escape_Velocity;
@@ -155,8 +269,7 @@ package body Ufo_System with SPARK_Mode is
                end case;
                
                Safe_Speed := Meters_Per_Second'Max(State.Current_Speed, Min_Safe_Speed);
-               -- For near-body interstellar, maintain minimum altitude based on body
-               Safe_Altitude := Kilometers'Max(State.Current_Altitude, 100);  -- 100 km minimum
+               Safe_Altitude := Kilometers'Min(State.Current_Altitude, 15);
             end if;
       end case;
       
