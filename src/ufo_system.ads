@@ -1,21 +1,42 @@
 package Ufo_System with SPARK_Mode is
 
    -- Data types based on observations from F/A-18 pilots
-   type Knots is range 0 .. 5000;
+   -- Using SI units where possible for scientific accuracy
+   
+   -- Speed types
+   type Knots is range 0 .. 5000;  -- Nautical speed (for compatibility)
+   type Meters_Per_Second is range 0 .. 50_000;  -- SI unit for velocity
+   
+   -- Distance/altitude types (using metric)
    type Degrees is range 0 .. 359;
-   type Feet is range 0 .. 500_000;  -- Altitude in feet
-   type Meters is range 0 .. 1_000_000;  -- Distance in meters
+   type Kilometers is range 0 .. 1_000_000;  -- Distance in kilometers
+   type Meters is range 0 .. 1_000_000;  -- Altitude in meters (SI unit)
+   
+   -- Temperature with human-safe range
    type Temperature_Celsius is range -100 .. 2000;  -- Temperature range
-
+   
+   -- Human comfort temperature range (18-25 C)
+   Human_Min_Temp : constant Temperature_Celsius := 18;
+   Human_Max_Temp : constant Temperature_Celsius := 25;
+   Human_Critical_Temp : constant Temperature_Celsius := 30;  -- Above this, immediate action needed
+   
+   -- Escape velocities in m/s for different celestial bodies
+   Earth_Escape_Velocity : constant Meters_Per_Second := 11_186;  -- 11.2 km/s
+   Moon_Escape_Velocity : constant Meters_Per_Second := 2_375;   -- 2.375 km/s
+   Mars_Escape_Velocity : constant Meters_Per_Second := 5_027;   -- 5.027 km/s
+   
+   -- Minimum safe altitude for deep space operations (16,000 km from Earth)
+   Deep_Space_Min_Altitude : constant Kilometers := 16_000;
+   
    type Propulsion_Mode is (Hover, Interstellar, Atmospheric_Cruise);
 
    -- Environment types for celestial body proximity
    type Celestial_Body_Type is (Earth, Moon, Mars, Deep_Space, Other);
    
    type Environment_State is record
-      Relative_Distance : Meters;  -- Distance to nearest celestial body
+      Relative_Distance : Kilometers;  -- Distance to nearest celestial body in km
       Body_Type : Celestial_Body_Type;
-      Atmospheric_Pressure : Float;  -- in hPa
+      Atmospheric_Pressure : Float;  -- in hPa (hectopascals)
    end record;
 
    type UAP_State is record
@@ -23,8 +44,8 @@ package Ufo_System with SPARK_Mode is
       Current_Wind    : Knots;
       Mode            : Propulsion_Mode;
       Hull_Integrity  : Integer range 0 .. 100;
-      Current_Speed   : Knots;  -- Current speed of the craft
-      Current_Altitude : Feet;  -- Current altitude
+      Current_Speed   : Meters_Per_Second;  -- Current speed in m/s (SI unit)
+      Current_Altitude : Kilometers;  -- Current altitude in km (SI unit)
       Current_Heading : Degrees;  -- Current direction
       Core_Temperature : Temperature_Celsius;  -- Core system temperature
       Environment     : Environment_State;  -- Current environment
@@ -44,13 +65,13 @@ package Ufo_System with SPARK_Mode is
           Pre     => State.Hull_Integrity > 50,
           Post    => State.Current_Wind = Wind_Speed;
 
-   -- Set the speed of the craft manually or via board computer
-   procedure Set_Speed (State : in out UAP_State; Speed : Knots)
+   -- Set the speed of the craft manually or via board computer (in m/s)
+   procedure Set_Speed (State : in out UAP_State; Speed : Meters_Per_Second)
      with Depends => (State => (State, Speed)),
           Post    => State.Current_Speed = Speed;
 
-   -- Set the altitude of the craft manually or via board computer
-   procedure Set_Altitude (State : in out UAP_State; Altitude : Feet)
+   -- Set the altitude of the craft manually or via board computer (in km)
+   procedure Set_Altitude (State : in out UAP_State; Altitude : Kilometers)
      with Depends => (State => (State, Altitude)),
           Post    => State.Current_Altitude = Altitude;
 
@@ -69,17 +90,25 @@ package Ufo_System with SPARK_Mode is
      with Depends => (State => (State, Temp)),
           Post    => State.Core_Temperature = Temp;
 
-   -- Emergency routine: Overheating detected - drop into the sea to cool down
-   -- Pre: Temperature must be above critical threshold
-   -- Post: Altitude is set to sea level (0 feet) if near a body with atmosphere
+   -- Emergency routine: Temperature outside human comfort range
+   -- If temperature is below 18C or above 25C, activate climate control
+   -- If temperature exceeds 30C (critical), initiate emergency cooling
+   -- Pre: Temperature must be outside safe range
+   -- Post: Temperature is adjusted toward safe range, or emergency cooling activated
+   procedure Regulate_Temperature (State : in out UAP_State)
+     with Depends => (State => State);
+
+   -- Emergency routine: Overheating detected - activate emergency cooling systems
+   -- Pre: Temperature must be above critical threshold (30C)
+   -- Post: Temperature is reduced toward safe range
    procedure Emergency_Cooling (State : in out UAP_State)
      with Depends => (State => State),
-          Pre     => State.Core_Temperature > 150,
-          Post    => State.Current_Altitude = 0;
+          Pre     => State.Core_Temperature > Human_Critical_Temp;
 
    -- Emergency routine: Adjust speed and altitude for current propulsion mode
    -- This ensures the craft operates within safe parameters for its mode
-   -- Pre: Environment must be valid (distance > 0 or in deep space)
+   -- In deep space: maintains speed above escape velocity and appropriate altitude
+   -- Pre: Environment must be valid (distance >= 0)
    procedure Adjust_To_Environment (State : in out UAP_State)
      with Depends => (State => State),
           Pre     => State.Environment.Relative_Distance >= 0;

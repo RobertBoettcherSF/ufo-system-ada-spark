@@ -21,13 +21,15 @@ procedure Main is
       IO.Put_Line("Current Wind:     " & Ufo_System.Knots'Image(S.Current_Wind) & " knots");
       IO.Put_Line("Propulsion Mode:  " & Ufo_System.Propulsion_Mode'Image(S.Mode));
       IO.Put_Line("Hull Integrity:   " & Integer'Image(S.Hull_Integrity) & "%");
-      IO.Put_Line("Current Speed:    " & Ufo_System.Knots'Image(S.Current_Speed) & " knots");
-      IO.Put_Line("Current Altitude: " & Ufo_System.Feet'Image(S.Current_Altitude) & " feet");
+      IO.Put_Line("Current Speed:    " & Ufo_System.Meters_Per_Second'Image(S.Current_Speed) & " m/s");
+      IO.Put_Line("Current Altitude: " & Ufo_System.Kilometers'Image(S.Current_Altitude) & " km");
       IO.Put_Line("Current Heading:  " & Ufo_System.Degrees'Image(S.Current_Heading) & " degrees");
       IO.Put_Line("Core Temperature: " & Ufo_System.Temperature_Celsius'Image(S.Core_Temperature) & " C");
+      IO.Put_Line("  (Human comfort: " & Ufo_System.Temperature_Celsius'Image(Ufo_System.Human_Min_Temp) & "-" & 
+                  Ufo_System.Temperature_Celsius'Image(Ufo_System.Human_Max_Temp) & " C)");
       IO.Put_Line("Environment:");
       IO.Put_Line("  Body Type: " & Ufo_System.Celestial_Body_Type'Image(S.Environment.Body_Type));
-      IO.Put_Line("  Distance:  " & Ufo_System.Meters'Image(S.Environment.Relative_Distance) & " meters");
+      IO.Put_Line("  Distance:  " & Ufo_System.Kilometers'Image(S.Environment.Relative_Distance) & " km");
       IO.Put_Line("  Pressure:  " & Float'Image(S.Environment.Atmospheric_Pressure) & " hPa");
       IO.New_Line;
    end Print_State;
@@ -48,9 +50,9 @@ procedure Main is
       IO.Put_Line("=== UFO System Demonstration ===");
       IO.New_Line;
       
-      -- Initialize state with full environment
+      -- Initialize state with full environment (using SI units)
       Default_Env := (
-         Relative_Distance => 10_000,
+         Relative_Distance => 10,  -- 10 km from Earth surface
          Body_Type => Ufo_System.Earth,
          Atmospheric_Pressure => 1013.25
       );
@@ -63,7 +65,7 @@ procedure Main is
          Current_Speed  => 0,
          Current_Altitude => 0,
          Current_Heading => 0,
-         Core_Temperature => 25,
+         Core_Temperature => 22,  -- Comfortable human temperature
          Environment     => Default_Env
       );
       
@@ -75,13 +77,13 @@ procedure Main is
       Ufo_System.Engage_Rotation(State);
       Print_State(State);
       
-      -- Set speed and altitude
-      IO.Put_Line("Setting speed to 500 knots...");
-      Ufo_System.Set_Speed(State, 500);
+      -- Set speed and altitude (using m/s and km)
+      IO.Put_Line("Setting speed to 150 m/s (~300 knots)...");
+      Ufo_System.Set_Speed(State, 150);
       Print_State(State);
       
-      IO.Put_Line("Setting altitude to 25000 feet...");
-      Ufo_System.Set_Altitude(State, 25000);
+      IO.Put_Line("Setting altitude to 5 km...");
+      Ufo_System.Set_Altitude(State, 5);
       Print_State(State);
       
       -- Change propulsion mode
@@ -104,8 +106,8 @@ procedure Main is
       State.Mode := Ufo_System.Interstellar;
       Print_State(State);
       
-      -- Update environment for space
-      IO.Put_Line("Entering deep space...");
+      -- Update environment for deep space (1,000,000 km from Earth)
+      IO.Put_Line("Entering deep space (1,000,000 km from Earth)...");
       State.Environment := (
          Relative_Distance => 1_000_000,
          Body_Type => Ufo_System.Deep_Space,
@@ -113,26 +115,30 @@ procedure Main is
       );
       Print_State(State);
       
-      -- Adjust to environment (should increase speed for interstellar in deep space)
+      -- Adjust to environment (should increase speed above escape velocity and altitude to 16,000+ km)
       IO.Put_Line("Adjusting to environment for Interstellar mode in deep space...");
       Ufo_System.Adjust_To_Environment(State);
       Print_State(State);
       
-      -- Simulate overheating
-      IO.Put_Line("Simulating core overheating (200C)...");
-      Ufo_System.Set_Temperature(State, 200);
+      -- Simulate temperature increase (but still within human comfort)
+      IO.Put_Line("Simulating temperature increase to 28C (above comfort range)...");
+      Ufo_System.Set_Temperature(State, 28);
       Print_State(State);
       
-      -- Emergency cooling - drop to sea level
-      IO.Put_Line("EMERGENCY: Core temperature critical! Initiating emergency cooling...");
-      begin
-         Ufo_System.Emergency_Cooling(State);
-         IO.Put_Line("Emergency cooling activated! Altitude set to sea level.");
-         Print_State(State);
-      exception
-         when others =>
-            IO.Put_Line("ERROR: Emergency cooling failed - temperature not critical enough!");
-      end;
+      -- Regulate temperature (should cool to 25C)
+      IO.Put_Line("Board computer regulating temperature...");
+      Ufo_System.Regulate_Temperature(State);
+      Print_State(State);
+      
+      -- Simulate core overheating (35C - critical)
+      IO.Put_Line("Simulating core overheating (35C - critical)...");
+      Ufo_System.Set_Temperature(State, 35);
+      Print_State(State);
+      
+      -- Emergency cooling should activate
+      IO.Put_Line("EMERGENCY: Core temperature critical! Board computer activating emergency cooling...");
+      Ufo_System.Regulate_Temperature(State);
+      Print_State(State);
       
       -- Damage hull
       IO.Put_Line("Simulating hull damage (40%)...");
@@ -155,9 +161,9 @@ procedure Main is
       State.Environment := Default_Env;
       State.Mode := Ufo_System.Atmospheric_Cruise;
       State.Hull_Integrity := 100;
-      State.Core_Temperature := 50;
-      Ufo_System.Set_Speed(State, 600);
-      Ufo_System.Set_Altitude(State, 30000);
+      State.Core_Temperature := 22;
+      Ufo_System.Set_Speed(State, 150);
+      Ufo_System.Set_Altitude(State, 10);
       Print_State(State);
       
       -- Adjust to environment one more time
@@ -174,9 +180,9 @@ procedure Main is
    begin
       IO.Put_Line("=== UFO System Interactive Mode ===");
       IO.Put_Line("Commands: state, rotate, wind <knots>, mode <hover|interstellar|cruise>,");
-      IO.Put_Line("         speed <knots>, altitude <feet>, heading <degrees>,");
-      IO.Put_Line("         temp <celsius>, env <body> <distance> <pressure>,");
-      IO.Put_Line("         adjust, emergency_cool, damage <percent>, repair <percent>,");
+      IO.Put_Line("         speed <m/s>, altitude <km>, heading <degrees>,");
+      IO.Put_Line("         temp <celsius>, env <body> <distance_km> <pressure_hPa>,");
+      IO.Put_Line("         adjust, regulate_temp, emergency_cool, damage <percent>, repair <percent>,");
       IO.Put_Line("         help, quit");
       IO.New_Line;
       
@@ -189,9 +195,9 @@ procedure Main is
          Current_Speed  => 0,
          Current_Altitude => 0,
          Current_Heading => 0,
-         Core_Temperature => 25,
+         Core_Temperature => 22,
          Environment     => (
-            Relative_Distance => 10_000,
+            Relative_Distance => 10,
             Body_Type => Ufo_System.Earth,
             Atmospheric_Pressure => 1013.25
          )
@@ -202,41 +208,42 @@ procedure Main is
          Ada.Text_IO.Get_Line(Input, Last);
          
          declare
-            Command : String := Input(1..Last);
-            Tokens  : constant Integer := Count_Tokens(Command);
+            Cmd : constant String := Input(1..Last);
+            Tokens  : constant Integer := Count_Tokens(Cmd);
          begin
             if Tokens = 0 then
                null;
-            elsif Token(Command, 1) = "quit" or Token(Command, 1) = "exit" then
+            elsif Token(Cmd, 1) = "quit" or Token(Cmd, 1) = "exit" then
                IO.Put_Line("Exiting...");
                exit;
-            elsif Token(Command, 1) = "help" then
+            elsif Token(Cmd, 1) = "help" then
                IO.Put_Line("Available commands:");
                IO.Put_Line("  state              - Show current state");
                IO.Put_Line("  rotate             - Engage rotation");
                IO.Put_Line("  wind <knots>       - Compensate for wind");
                IO.Put_Line("  mode <m>           - Set propulsion mode (hover, interstellar, cruise)");
-               IO.Put_Line("  speed <knots>      - Set speed");
-               IO.Put_Line("  altitude <feet>    - Set altitude");
+               IO.Put_Line("  speed <m/s>        - Set speed in meters per second");
+               IO.Put_Line("  altitude <km>      - Set altitude in kilometers");
                IO.Put_Line("  heading <degrees>  - Set heading/direction");
                IO.Put_Line("  temp <celsius>     - Set core temperature");
                IO.Put_Line("  env <body> <dist> <press> - Set environment (body: earth/moon/mars/space/other)");
                IO.Put_Line("  adjust             - Auto-adjust speed/altitude to environment");
-               IO.Put_Line("  emergency_cool     - Emergency cooling (requires temp > 150C)");
+               IO.Put_Line("  regulate_temp      - Regulate temperature to human comfort range");
+               IO.Put_Line("  emergency_cool     - Emergency cooling (requires temp > 30C)");
                IO.Put_Line("  damage <percent>   - Damage hull by percentage");
                IO.Put_Line("  repair <percent>   - Repair hull by percentage");
                IO.Put_Line("  help               - Show this help");
                IO.Put_Line("  quit               - Exit");
-            elsif Token(Command, 1) = "state" then
+            elsif Token(Cmd, 1) = "state" then
                Print_State(State);
-            elsif Token(Command, 1) = "rotate" then
+            elsif Token(Cmd, 1) = "rotate" then
                Ufo_System.Engage_Rotation(State);
                IO.Put_Line("Rotation engaged!");
-            elsif Token(Command, 1) = "wind" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "wind" and Tokens >= 2 then
                declare
                   Wind_Speed : Integer;
                begin
-                  Wind_Speed := Integer'Value(Token(Command, 2));
+                  Wind_Speed := Integer'Value(Token(Cmd, 2));
                   if Wind_Speed >= 0 and Wind_Speed <= 5000 then
                      begin
                         Ufo_System.Compensate_Wind(State, Ufo_System.Knots(Wind_Speed));
@@ -254,9 +261,9 @@ procedure Main is
                   when others =>
                      IO.Put_Line("ERROR: Invalid wind speed value");
                end;
-            elsif Token(Command, 1) = "mode" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "mode" and Tokens >= 2 then
                declare
-                  Mode_Str : String := To_Lower(Token(Command, 2));
+                  Mode_Str : constant String := To_Lower(Token(Cmd, 2));
                begin
                   if Mode_Str = "hover" then
                      State.Mode := Ufo_System.Hover;
@@ -271,41 +278,41 @@ procedure Main is
                      IO.Put_Line("ERROR: Invalid mode. Use: hover, interstellar, cruise");
                   end if;
                end;
-            elsif Token(Command, 1) = "speed" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "speed" and Tokens >= 2 then
                declare
                   Speed : Integer;
                begin
-                  Speed := Integer'Value(Token(Command, 2));
-                  if Speed >= 0 and Speed <= 5000 then
-                     Ufo_System.Set_Speed(State, Ufo_System.Knots(Speed));
-                     IO.Put_Line("Speed set to " & Ufo_System.Knots'Image(Ufo_System.Knots(Speed)));
+                  Speed := Integer'Value(Token(Cmd, 2));
+                  if Speed >= 0 and Speed <= 50_000 then
+                     Ufo_System.Set_Speed(State, Ufo_System.Meters_Per_Second(Speed));
+                     IO.Put_Line("Speed set to " & Ufo_System.Meters_Per_Second'Image(Ufo_System.Meters_Per_Second(Speed)) & " m/s");
                   else
-                     IO.Put_Line("ERROR: Speed must be 0-5000 knots");
+                     IO.Put_Line("ERROR: Speed must be 0-50000 m/s");
                   end if;
                exception
                   when others =>
                      IO.Put_Line("ERROR: Invalid speed value");
                end;
-            elsif Token(Command, 1) = "altitude" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "altitude" and Tokens >= 2 then
                declare
                   Altitude : Integer;
                begin
-                  Altitude := Integer'Value(Token(Command, 2));
-                  if Altitude >= 0 and Altitude <= 500000 then
-                     Ufo_System.Set_Altitude(State, Ufo_System.Feet(Altitude));
-                     IO.Put_Line("Altitude set to " & Ufo_System.Feet'Image(Ufo_System.Feet(Altitude)));
+                  Altitude := Integer'Value(Token(Cmd, 2));
+                  if Altitude >= 0 and Altitude <= 1_000_000 then
+                     Ufo_System.Set_Altitude(State, Ufo_System.Kilometers(Altitude));
+                     IO.Put_Line("Altitude set to " & Ufo_System.Kilometers'Image(Ufo_System.Kilometers(Altitude)) & " km");
                   else
-                     IO.Put_Line("ERROR: Altitude must be 0-500000 feet");
+                     IO.Put_Line("ERROR: Altitude must be 0-1000000 km");
                   end if;
                exception
                   when others =>
                      IO.Put_Line("ERROR: Invalid altitude value");
                end;
-            elsif Token(Command, 1) = "heading" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "heading" and Tokens >= 2 then
                declare
                   Heading : Integer;
                begin
-                  Heading := Integer'Value(Token(Command, 2));
+                  Heading := Integer'Value(Token(Cmd, 2));
                   if Heading >= 0 and Heading <= 359 then
                      Ufo_System.Set_Heading(State, Ufo_System.Degrees(Heading));
                      IO.Put_Line("Heading set to " & Ufo_System.Degrees'Image(Ufo_System.Degrees(Heading)));
@@ -316,14 +323,14 @@ procedure Main is
                   when others =>
                      IO.Put_Line("ERROR: Invalid heading value");
                end;
-            elsif Token(Command, 1) = "temp" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "temp" and Tokens >= 2 then
                declare
                   Temp : Integer;
                begin
-                  Temp := Integer'Value(Token(Command, 2));
+                  Temp := Integer'Value(Token(Cmd, 2));
                   if Temp >= -100 and Temp <= 2000 then
                      Ufo_System.Set_Temperature(State, Ufo_System.Temperature_Celsius(Temp));
-                     IO.Put_Line("Core temperature set to " & Ufo_System.Temperature_Celsius'Image(Ufo_System.Temperature_Celsius(Temp)));
+                     IO.Put_Line("Core temperature set to " & Ufo_System.Temperature_Celsius'Image(Ufo_System.Temperature_Celsius(Temp)) & " C");
                   else
                      IO.Put_Line("ERROR: Temperature must be -100 to 2000 Celsius");
                   end if;
@@ -331,14 +338,14 @@ procedure Main is
                   when others =>
                      IO.Put_Line("ERROR: Invalid temperature value");
                end;
-            elsif Token(Command, 1) = "env" and Tokens >= 4 then
+            elsif Token(Cmd, 1) = "env" and Tokens >= 4 then
                declare
-                  Body_Str : String := To_Lower(Token(Command, 2));
+                  Body_Str : constant String := To_Lower(Token(Cmd, 2));
                   Distance : Integer;
                   Pressure : Float;
                begin
-                  Distance := Integer'Value(Token(Command, 3));
-                  Pressure := Float'Value(Token(Command, 4));
+                  Distance := Integer'Value(Token(Cmd, 3));
+                  Pressure := Float'Value(Token(Cmd, 4));
                   
                   -- Parse body type
                   if Body_Str = "earth" then
@@ -353,44 +360,53 @@ procedure Main is
                      State.Environment.Body_Type := Ufo_System.Other;
                   end if;
                   
-                  State.Environment.Relative_Distance := Ufo_System.Meters(Distance);
+                  State.Environment.Relative_Distance := Ufo_System.Kilometers(Distance);
                   State.Environment.Atmospheric_Pressure := Pressure;
                   
                   IO.Put_Line("Environment set:");
                   IO.Put_Line("  Body: " & Ufo_System.Celestial_Body_Type'Image(State.Environment.Body_Type));
-                  IO.Put_Line("  Distance: " & Ufo_System.Meters'Image(State.Environment.Relative_Distance));
-                  IO.Put_Line("  Pressure: " & Float'Image(State.Environment.Atmospheric_Pressure));
+                  IO.Put_Line("  Distance: " & Ufo_System.Kilometers'Image(State.Environment.Relative_Distance) & " km");
+                  IO.Put_Line("  Pressure: " & Float'Image(State.Environment.Atmospheric_Pressure) & " hPa");
                exception
                   when others =>
                      IO.Put_Line("ERROR: Invalid environment parameters");
                end;
-            elsif Token(Command, 1) = "adjust" then
+            elsif Token(Cmd, 1) = "adjust" then
                begin
                   Ufo_System.Adjust_To_Environment(State);
                   IO.Put_Line("Adjusted speed and altitude to environment:");
-                  IO.Put_Line("  Speed: " & Ufo_System.Knots'Image(State.Current_Speed));
-                  IO.Put_Line("  Altitude: " & Ufo_System.Feet'Image(State.Current_Altitude));
+                  IO.Put_Line("  Speed: " & Ufo_System.Meters_Per_Second'Image(State.Current_Speed) & " m/s");
+                  IO.Put_Line("  Altitude: " & Ufo_System.Kilometers'Image(State.Current_Altitude) & " km");
                exception
                   when others =>
                      IO.Put_Line("ERROR: Cannot adjust - invalid environment state");
                end;
-            elsif Token(Command, 1) = "emergency_cool" then
+            elsif Token(Cmd, 1) = "regulate_temp" then
+               begin
+                  Ufo_System.Regulate_Temperature(State);
+                  IO.Put_Line("Temperature regulated to human comfort range");
+                  IO.Put_Line("  New temperature: " & Ufo_System.Temperature_Celsius'Image(State.Core_Temperature) & " C");
+               exception
+                  when others =>
+                     IO.Put_Line("ERROR: Temperature regulation failed");
+               end;
+            elsif Token(Cmd, 1) = "emergency_cool" then
                begin
                   Ufo_System.Emergency_Cooling(State);
-                  IO.Put_Line("EMERGENCY: Dropped to sea level for cooling!");
-                  IO.Put_Line("  New altitude: " & Ufo_System.Feet'Image(State.Current_Altitude));
+                  IO.Put_Line("EMERGENCY: Emergency cooling activated!");
+                  IO.Put_Line("  New temperature: " & Ufo_System.Temperature_Celsius'Image(State.Core_Temperature) & " C");
                exception
                   when Constraint_Error =>
-                     IO.Put_Line("ERROR: Emergency cooling not triggered - temperature must be > 150C");
-                     IO.Put_Line("  Current temperature: " & Ufo_System.Temperature_Celsius'Image(State.Core_Temperature));
+                     IO.Put_Line("ERROR: Emergency cooling not triggered - temperature must be > 30C");
+                     IO.Put_Line("  Current temperature: " & Ufo_System.Temperature_Celsius'Image(State.Core_Temperature) & " C");
                   when others =>
                      IO.Put_Line("ERROR: Emergency cooling failed");
                end;
-            elsif Token(Command, 1) = "damage" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "damage" and Tokens >= 2 then
                declare
                   Damage : Integer;
                begin
-                  Damage := Integer'Value(Token(Command, 2));
+                  Damage := Integer'Value(Token(Cmd, 2));
                   if Damage >= 0 and Damage <= 100 then
                      State.Hull_Integrity := Integer'Max(0, State.Hull_Integrity - Damage);
                      IO.Put_Line("Hull damaged by " & Integer'Image(Damage) & "%");
@@ -402,11 +418,11 @@ procedure Main is
                   when others =>
                      IO.Put_Line("ERROR: Invalid damage value");
                end;
-            elsif Token(Command, 1) = "repair" and Tokens >= 2 then
+            elsif Token(Cmd, 1) = "repair" and Tokens >= 2 then
                declare
                   Repair : Integer;
                begin
-                  Repair := Integer'Value(Token(Command, 2));
+                  Repair := Integer'Value(Token(Cmd, 2));
                   if Repair >= 0 and Repair <= 100 then
                      State.Hull_Integrity := Integer'Min(100, State.Hull_Integrity + Repair);
                      IO.Put_Line("Hull repaired by " & Integer'Image(Repair) & "%");
@@ -490,7 +506,7 @@ begin
       Run_Interactive;
    else
       declare
-         Arg : String := Ada.Command_Line.Argument(1);
+         Arg : constant String := Ada.Command_Line.Argument(1);
       begin
          if Arg = "demo" then
             Run_Demo;
