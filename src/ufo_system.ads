@@ -8,7 +8,11 @@ package Ufo_System with SPARK_Mode is
    
    -- Maximum speed: 99.9% of light speed (299,493,155 m/s)
    -- Nothing with mass can reach or exceed light speed (299,792,458 m/s)
-   type Meters_Per_Second is range 0 .. 299_493_155;
+   -- Define the constant first so it can be used in the type range
+   Speed_Of_Light_Const : constant := 299_792_458;
+   Max_Achievable_Speed_Const : constant := 299_493_155;  -- 99.9% of light speed
+   
+   type Meters_Per_Second is range 0 .. Max_Achievable_Speed_Const;
    
    -- Distance/altitude types (using metric)
    type Degrees is range 0 .. 359;
@@ -23,11 +27,11 @@ package Ufo_System with SPARK_Mode is
    Human_Critical_Temp : constant Temperature_Celsius := 30;  -- Above this, immediate action needed
    
    -- Speed of light in m/s (299,792,458 m/s) - theoretical limit
-   Speed_Of_Light : constant Meters_Per_Second := 299_792_458;
+   Speed_Of_Light : constant Meters_Per_Second := Meters_Per_Second(Speed_Of_Light_Const);
    
    -- Maximum achievable speed: 99.9% of light speed
    -- This is the practical limit for any craft with mass
-   Max_Achievable_Speed : constant Meters_Per_Second := 299_493_155;
+   Max_Achievable_Speed : constant Meters_Per_Second := Meters_Per_Second(Max_Achievable_Speed_Const);
    
    -- Escape velocities in m/s for different celestial bodies
    Earth_Escape_Velocity : constant Meters_Per_Second := 11_186;  -- 11.2 km/s

@@ -32,7 +32,7 @@ procedure Main is
       IO.Put_Line("  Body Type: " & Ufo_System.Celestial_Body_Type'Image(S.Environment.Body_Type));
       IO.Put_Line("  Distance:  " & Ufo_System.Kilometers'Image(S.Environment.Relative_Distance) & " km");
       IO.Put_Line("  Pressure:  " & Float'Image(S.Environment.Atmospheric_Pressure) & " hPa");
-      IO.Put_Line("  Obstacle:  " & Ufo_System.Obstacle_State'Image(S.Environment.Has_Obstacle));
+      IO.Put_Line("  Obstacle:  " & S.Environment.Has_Obstacle'Image(S.Environment.Has_Obstacle));
       if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then
          IO.Put_Line("  Obstacle Distance: " & Ufo_System.Kilometers'Image(S.Environment.Obstacle_Distance) & " km");
       end if;
