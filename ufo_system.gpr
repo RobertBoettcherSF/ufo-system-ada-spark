@@ -9,7 +9,7 @@ project Ufo_System is
    for Exec_Dir use "bin";
    
    -- Create directories if they don't exist
-   for Create_Missing_Dirs use ("obj", "bin");
+   for Create_Missing_Dirs use ("True");
    
    -- Main executable (terminal application)
    for Main use ("main");
