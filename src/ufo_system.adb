@@ -8,7 +8,13 @@ package body Ufo_System with SPARK_Mode is
 
    procedure Compensate_Wind (State : in out UAP_State; Wind_Speed : Knots) is
    begin
-      State.Current_Wind := Wind_Speed;
+      -- Only compensate wind if in atmosphere (pressure > 0)
+      -- In deep space or vacuum, wind_Speed should be 0
+      if State.Environment.Atmospheric_Pressure > 0.0 then
+         State.Current_Wind := Wind_Speed;
+      else
+         State.Current_Wind := 0;
+      end if;
       -- Algorithm calculates vector to maintain exact position
    end Compensate_Wind;
 
@@ -30,6 +36,10 @@ package body Ufo_System with SPARK_Mode is
    procedure Set_Environment (State : in out UAP_State; Env : Environment_State) is
    begin
       State.Environment := Env;
+      -- If no atmosphere, ensure wind is 0
+      if Env.Atmospheric_Pressure <= 0.0 then
+         State.Current_Wind := 0;
+      end if;
    end Set_Environment;
 
    procedure Set_Temperature (State : in out UAP_State; Temp : Temperature_Celsius) is
@@ -84,9 +94,10 @@ package body Ufo_System with SPARK_Mode is
    end Emergency_Cooling;
 
    -- Calculate target speed based on current mode and environment
-   -- This sets the Target_Speed field which the board computer will work toward
-   -- IMPORTANT: Target speed NEVER exceeds Max_Achievable_Speed (99.9% of light speed)
-   -- as nothing with mass can reach or exceed light speed
+   -- In atmosphere: target is escape velocity (can go lower but this is the goal)
+   -- In LEO: maintain orbital velocity
+   -- In deep space with no obstacles: target is near light speed (Max_Achievable_Speed)
+   -- In deep space with obstacles: target is safe evasion speed
    procedure Calculate_Target_Speed (State : in out UAP_State) is
       Target : Meters_Per_Second;
    begin
@@ -154,11 +165,6 @@ package body Ufo_System with SPARK_Mode is
                end case;
             end if;
       end case;
-      
-      -- Ensure target never exceeds maximum achievable speed (99.9% of light speed)
-      if Target > Max_Achievable_Speed then
-         Target := Max_Achievable_Speed;
-      end if;
       
       State.Target_Speed := Target;
    end Calculate_Target_Speed;
@@ -289,6 +295,11 @@ package body Ufo_System with SPARK_Mode is
       
       -- Also regulate temperature for human safety
       Regulate_Temperature(State);
+      
+      -- Sanity check: if no atmosphere, wind must be 0
+      if State.Environment.Atmospheric_Pressure <= 0.0 then
+         State.Current_Wind := 0;
+      end if;
       
    end Adjust_To_Environment;
 

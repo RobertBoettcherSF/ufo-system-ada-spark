@@ -125,7 +125,7 @@ procedure Main is
       Print_State(State);
       
       -- Compensate wind
-      IO.Put_Line("Compensating for 100 knots wind...");
+      IO.Put_Line("Compensating for 100 knots wind (only works in atmosphere)...");
       Ufo_System.Compensate_Wind(State, 100);
       Print_State(State);
       
