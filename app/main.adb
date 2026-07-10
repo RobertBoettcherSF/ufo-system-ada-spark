@@ -9,6 +9,11 @@ procedure Main is
    
    State : Ufo_System.UAP_State;
    
+   -- Forward declarations for helper functions
+   function Count_Tokens (S : String) return Integer;
+   function Token (S : String; N : Integer) return String;
+   function To_Lower (S : String) return String;
+
    procedure Print_State (S : Ufo_System.UAP_State) is
    begin
       IO.Put_Line("=== Current UFO State ===");
