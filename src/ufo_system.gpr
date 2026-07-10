@@ -5,9 +5,6 @@ library project Ufo_System_Lib is
    for Source_Dirs use (".");
    for Object_Dir use "../obj/lib";
    
-   -- Create directories if they don't exist
-   for Create_Missing_Dirs use ("True");
-   
    package Compiler is
       -- SPARK mode with all warnings and assertions enabled
       for Default_Switches ("Ada") use ("-gnatwa", "-gnata", "-O2");

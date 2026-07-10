@@ -5,9 +5,6 @@ project Ufo_Tests is
    for Object_Dir use "../obj/tests";
    for Exec_Dir use "../bin";
    
-   -- Create directories if they don't exist
-   for Create_Missing_Dirs use ("True");
-   
    -- Test executable
    for Main use ("run_tests");
    
