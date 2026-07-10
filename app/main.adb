@@ -15,6 +15,7 @@ procedure Main is
    function To_Lower (S : String) return String;
 
    procedure Print_State (S : Ufo_System.UAP_State) is
+      Obstacle_Status : String(1..8);
    begin
       IO.Put_Line("=== Current UFO State ===");
       IO.Put_Line("Is Rotating:      " & Boolean'Image(S.Is_Rotating));
@@ -32,9 +33,39 @@ procedure Main is
       IO.Put_Line("  Body Type: " & Ufo_System.Celestial_Body_Type'Image(S.Environment.Body_Type));
       IO.Put_Line("  Distance:  " & Ufo_System.Kilometers'Image(S.Environment.Relative_Distance) & " km");
       IO.Put_Line("  Pressure:  " & Float'Image(S.Environment.Atmospheric_Pressure) & " hPa");
-      IO.Put_Line("  Obstacle:  "       IO.Put_Line("  Obstacle:  " & S.Environment.Has_Obstacle'Image(S.Environment.Has_Obstacle)); (if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then "Detected" else "None"));
+      
+      -- Display obstacle status
+      if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then
+         Obstacle_Status := "Detected";
+      else
+         Obstacle_Status := "None    ";
+      end if;
+      IO.Put_Line("  Obstacle:  " & Obstacle_Status);
+      
       if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then
          IO.Put_Line("  Obstacle Distance: " & Ufo_System.Kilometers'Image(S.Environment.Obstacle_Distance) & " km");
+      end if;
+      IO.New_Line;
+   end Print_State;
+
+   begin
+      IO.Put_Line("=== Current UFO State ===");
+      IO.Put_Line("Is Rotating:      " & Boolean'Image(S.Is_Rotating));
+      IO.Put_Line("Current Wind:     " & Ufo_System.Knots'Image(S.Current_Wind) & " knots");
+      IO.Put_Line("Propulsion Mode:  " & Ufo_System.Propulsion_Mode'Image(S.Mode));
+      IO.Put_Line("Hull Integrity:   " & Integer'Image(S.Hull_Integrity) & "%");
+      IO.Put_Line("Current Speed:    " & Ufo_System.Meters_Per_Second'Image(S.Current_Speed) & " m/s");
+      IO.Put_Line("Target Speed:     " & Ufo_System.Meters_Per_Second'Image(S.Target_Speed) & " m/s");
+      IO.Put_Line("Current Altitude: " & Ufo_System.Kilometers'Image(S.Current_Altitude) & " km");
+      IO.Put_Line("Current Heading:  " & Ufo_System.Degrees'Image(S.Current_Heading) & " degrees");
+      IO.Put_Line("Core Temperature: " & Ufo_System.Temperature_Celsius'Image(S.Core_Temperature) & " C");
+      IO.Put_Line("  (Human comfort: " & Ufo_System.Temperature_Celsius'Image(Ufo_System.Human_Min_Temp) & "-" & 
+                  Ufo_System.Temperature_Celsius'Image(Ufo_System.Human_Max_Temp) & " C)");
+      IO.Put_Line("Environment:");
+      IO.Put_Line("  Body Type: " & Ufo_System.Celestial_Body_Type'Image(S.Environment.Body_Type));
+      IO.Put_Line("  Distance:  " & Ufo_System.Kilometers'Image(S.Environment.Relative_Distance) & " km");
+      IO.Put_Line("  Pressure:  " & Float'Image(S.Environment.Atmospheric_Pressure) & " hPa");
+      IO.Put_Line("  Obstacle:  "       IO.Put_Line("  Obstacle:  "       IO.Put_Line("  Obstacle:  "       IO.Put_Line("  Obstacle:  " & S.Environment.Has_Obstacle'Image(S.Environment.Has_Obstacle)); (if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then "Detected" else "None")); (if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then "Detected" else "None")); (if S.Environment.Has_Obstacle = Ufo_System.Obstacle_Detected then "Detected" else "None"));
       end if;
       IO.New_Line;
    end Print_State;
