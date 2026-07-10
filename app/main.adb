@@ -15,6 +15,7 @@ procedure Main is
    function To_Lower (S : String) return String;
 
    procedure Print_State (S : Ufo_System.UAP_State) is
+   use type Ufo_System.Obstacle_State;
       Obstacle_Status : String(1..8);
    begin
       IO.Put_Line("=== Current UFO State ===");
