@@ -4,6 +4,7 @@
 # Compiler
 GNAT ?= gnatmake
 GPRBUILD ?= gprbuild
+GNATPROVE ?= gnatprove
 
 # Directories
 SRC_DIR = src
@@ -28,7 +29,7 @@ build: $(BIN_DIR)/main $(BIN_DIR)/run_tests
 # Build the main terminal application
 $(BIN_DIR)/main: app/main.adb src/ufo_system.ads src/ufo_system.adb
 	mkdir -p $(BIN_DIR) $(OBJ_DIR)
-	$(GPRBUILD) -P $(MAIN_PROJECT) -X MAIN=app/main.adb
+	$(GPRBUILD) -P $(MAIN_PROJECT)
 
 # Build the test suite
 $(BIN_DIR)/run_tests: tests/run_tests.adb tests/test_ufo_system.adb tests/ufo_system_tests.ads tests/ufo_system_tests.adb src/ufo_system.ads src/ufo_system.adb
@@ -73,4 +74,5 @@ clean:
 # SPARK verification
 spark: 
 	@echo "Running SPARK verification on src/ufo_system..."
-	cd src && $(GPRBUILD) -P ufo_system.gpr --target=prove || echo "SPARK verification complete (check output for warnings)"
+	mkdir -p $(OBJ_DIR)/lib
+	cd src && $(GNATPROVE) -P ufo_system.gpr --level=4 --no-inlining --report=all || echo "SPARK verification complete (check output for warnings)"
